@@ -129,4 +129,6 @@ None of that changes the mechanism this demonstrates.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
+
+If you run a modified version of this as a network service, the AGPL requires you to publish your source.
