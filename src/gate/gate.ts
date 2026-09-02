@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // The gate owns every decision. A tool's class is a property of its definition, never of the input,
 // so an agent cannot escalate by phrasing a call differently. `execute` here never throws: refusals,
@@ -69,6 +69,8 @@ export interface GovernedTool<I = unknown> {
   args?(input: I): ArgumentView[];
   /** Sealed tools: the value the human must type before approval, e.g. the amount. */
   confirmation?(input: I): string;
+  /** One dim line under the card's buttons: what undoing this would cost. */
+  reversal?: string;
   /** Applies the effect and returns the success value. Only the gate calls this. */
   run(input: I): OkResult;
   /** One-line summary of a success value for the ledger. Defaults to the effect line. */

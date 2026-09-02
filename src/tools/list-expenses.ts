@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 import { CATEGORIES, MEMBERS, STATUSES, findMember, type Category, type ExpenseStatus, type Member, type Store } from "../data/fixture";
 import type { GovernedTool } from "../gate/gate";

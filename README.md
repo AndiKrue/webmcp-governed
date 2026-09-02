@@ -1,4 +1,4 @@
-# Governed Tool Calls
+# Ask First
 
 **A WebMCP demo where an agent proposes consequential actions and a human approves them, one at a
 time, with a receipt.**
@@ -90,8 +90,8 @@ with a reason, and watch it come back. Then ask it to pay draft D-001.
 Without an agent the page installs its own small `document.modelContext` (the header badge says
 *polyfill — no agent attached*) so everything still runs. Feature detection is per method: a browser
 that provides only part of the surface keeps what it has and gets the rest added (the badge then says
-*native WebMCP (partial, completed by the page)*). Add `?harness=1` to get a form that calls
-tools the way an agent would. Add `?transport=two-call` to try the fallback transport (the default is
+*native WebMCP (partial, completed by the page)*). Add `?console=1` for the tool console, a form that
+calls tools the way an agent would. Add `?transport=two-call` to try the fallback transport (the default is
 `hold`; the constant lives in `src/gate/config.ts`). Add `?nopolyfill=1` to see what the browser
 provides on its own.
 
@@ -141,6 +141,10 @@ and the reason would be lost. Each result carries a `receipt_id`, the ledger row
 **`signal`.** `execute` receives `options.signal`. If the caller aborts while a card is up, the ledger
 records `cancelled_by_caller`, the card is withdrawn, and the promise resolves anyway.
 
+**Argument shape.** The draft IDL passes `executeTool`'s input as an object; Chrome 150 expects a
+JSON string and rejects an object with `UnknownError: Failed to parse input arguments`. The page's
+polyfill accepts both, and the tool console sends the string form first against a native API.
+
 **Sealed confirmation.** For `pay_reimbursement` the human types the amount. The gate checks it
 (`decide(id, "approve", { confirmation })` refuses a wrong value); the button state only reflects it.
 
@@ -177,11 +181,8 @@ the same payment, and the ledger records only the page's decision.
 
 ## What production would need
 
-Signed receipts. Persistence with an audit trail that survives the session. A policy layer so classes
-are configurable per deployment rather than declared in code. Multi-party approval for actions above a
-threshold. And a way for the agent to request a class change and be refused.
-
-None of that changes the mechanism this demonstrates.
+Signed receipts. Persistence. Authentication. Multi-user. None of that changes the mechanism this
+demonstrates.
 
 ## Licence
 

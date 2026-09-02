@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 import type { Ledger, LedgerRow } from "../ledger/ledger";
 
@@ -62,23 +62,30 @@ export function mountLedgerView(container: HTMLElement, ledger: Ledger): { updat
     li.id = `ledger-${row.id}`;
     li.dataset["id"] = row.id;
     li.dataset["decision"] = row.decision;
+    const positive = row.decision === "approved" || row.decision === "executed";
+    const mark = el("span", `ledger-mark ${positive ? "mark-yes" : "mark-no"}`, positive ? "✓" : "✕");
+    mark.setAttribute("aria-hidden", "true");
+    const body = el("div", "ledger-body");
     const top = el("div", "ledger-top");
     top.append(
-      el("span", "mono", row.id),
-      el("span", `pill pill-${row.decision}`, decisionLabel(row)),
       el("span", "ledger-title", row.title),
-      el("span", `tag tag-${row.tool_class}`, row.tool_class),
+      el("span", "ledger-label", decisionLabel(row)),
+      el("span", "ledger-class", row.tool_class),
     );
-    const meta = el("div", "ledger-meta muted");
-    meta.textContent = `${row.ts_decided.replace("T", " ").slice(0, 19)} · ${row.decider} · ${row.latency_ms} ms · ${row.transport} · ${row.api}`;
-    const outcome = el("div", "ledger-outcome", row.effect ?? row.outcome);
-    li.append(top, meta, outcome);
-    if (row.effect && row.outcome) li.append(el("div", "ledger-outcome muted", row.outcome));
-    if (row.reason) li.append(el("div", "ledger-reason", `Reason: ${row.reason}`));
-    if (row.retry_hint) li.append(el("div", "muted", `retry_hint: ${row.retry_hint}`));
+    const time = el("time", "ledger-time", row.ts_decided.replace("T", " ").slice(11, 19));
+    time.dateTime = row.ts_decided;
+    time.title = `${row.ts_decided} · ${row.decider} · ${row.latency_ms} ms · ${row.transport} · ${row.api}`;
+    top.append(time);
+    body.append(top, el("div", "ledger-outcome", row.effect ?? row.outcome));
+    if (row.effect && row.outcome) body.append(el("div", "ledger-outcome muted", row.outcome));
+    if (row.reason) body.append(el("div", "ledger-reason", `Reason: ${row.reason}`));
+    const meta = el("div", "ledger-meta");
+    meta.textContent = `${row.id} · ${row.decider} · ${row.latency_ms} ms${row.retry_hint ? ` · retry_hint: ${row.retry_hint}` : ""}`;
+    body.append(meta);
     const raw = el("details", "ledger-raw");
     raw.append(el("summary", undefined, "Row JSON"), el("pre", undefined, JSON.stringify(row, null, 2)));
-    li.append(raw);
+    body.append(raw);
+    li.append(mark, body);
     return li;
   }
 

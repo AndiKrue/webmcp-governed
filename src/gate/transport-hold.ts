@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // The primary transport: a gated `execute` promise is held open until the human decides on the card.
 // The spec defines no timeout for `execute`, so this is conformant; whether a given client waits is

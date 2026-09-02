@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // Per-method completion of a partial native `modelContext` (Chrome 148 behind its flag exposes only
 // `registerTool`). Native `registerTool` must still receive every registration.

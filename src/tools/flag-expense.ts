@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 import { sumAmounts, type Expense, type Store } from "../data/fixture";
 import type { GovernedTool } from "../gate/gate";
@@ -18,6 +18,7 @@ export function flagExpenseTool(store: Store): GovernedTool<FlagInput> {
     class: "gated",
     summary: "Flag an expense for review, with a reason.",
     why: "This puts a hold on someone's reimbursement",
+    reversal: "Cost of reversal: low. Nothing leaves the budget; the flag only holds the expense back.",
     returns: '{status:"ok", expense}',
     inputSchema: {
       type: "object",

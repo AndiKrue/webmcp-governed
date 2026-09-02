@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // Probes whether the bundled Chrome for Testing exposes a native `modelContext` under any of a few
 // feature flags. Purely informational: nothing downstream depends on the result.

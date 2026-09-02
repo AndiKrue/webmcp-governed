@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 import { describe, expect, it } from "vitest";
 import { createPolyfill } from "../src/webmcp/polyfill";
@@ -90,6 +90,16 @@ describe("modelContext polyfill", () => {
     controller.abort(new DOMException("stop", "AbortError"));
     await expect(call).rejects.toMatchObject({ name: "AbortError" });
     expect(toolSignal!.aborted).toBe(true);
+  });
+
+  it("accepts a JSON string argument as Chrome 150 does, and rejects a malformed one as UnknownError", async () => {
+    const mc = createPolyfill();
+    await mc.registerTool({ name: "echo", description: "d", execute: (input) => ({ echo: input }) });
+    const [tool] = await mc.getTools();
+    expect(JSON.parse(await mc.executeTool(tool!, JSON.stringify({ member: "Dana" })))).toEqual({ echo: { member: "Dana" } });
+    expect(JSON.parse(await mc.executeTool(tool!, "{}"))).toEqual({ echo: {} });
+    expect(JSON.parse(await mc.executeTool(tool!, { member: "Dana" }))).toEqual({ echo: { member: "Dana" } });
+    await expect(mc.executeTool(tool!, "{not json")).rejects.toMatchObject({ name: "UnknownError", message: "Failed to parse input arguments" });
   });
 
   it("refuses to execute an unknown tool", async () => {

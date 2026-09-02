@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
-// A stand-in for an agent, shown only with `?harness=1`. It invokes tools through
+// A stand-in for an agent, shown only with `?console=1`. It invokes tools through
 // `document.modelContext.executeTool` when the browser offers it; otherwise through the registered
 // definition's `execute`, which goes through the same gate.
+//
+// Argument shape: the WebMCP draft IDL passes `input` as an object, but Chrome 150 expects a JSON
+// string and rejects an object with UnknownError "Failed to parse input arguments". Against a native
+// API the console therefore sends the string form first and falls back to the object form; against
+// the page's own polyfill it sends the object form.
 
 import type { ToolRegistry } from "../webmcp/register";
 import type { JsonSchema, ModelContextTool } from "../webmcp/types";
@@ -66,31 +71,31 @@ function readFields(fields: Field[]): Record<string, unknown> {
   return input;
 }
 
-export function mountHarness(container: HTMLElement, registry: ToolRegistry): { update(): void } {
-  const section = el("section", "harness panel");
-  section.id = "harness";
-  section.setAttribute("aria-label", "Agent harness");
-  section.append(el("h2", undefined, "Agent harness"));
+export function mountConsole(container: HTMLElement, registry: ToolRegistry): { update(): void } {
+  const section = el("section", "console panel");
+  section.id = "console";
+  section.setAttribute("aria-label", "Tool console");
+  section.append(el("h2", undefined, "Tool console"));
   section.append(el("p", "muted", "Stands in for an agent. Calls go through document.modelContext.executeTool when the browser provides it, otherwise through the registered definition, on the same gate path."));
   const pickLabel = el("label", undefined, "Tool");
-  pickLabel.htmlFor = "harness-tool";
+  pickLabel.htmlFor = "console-tool";
   const pick = el("select");
-  pick.id = "harness-tool";
-  const form = el("div", "harness-form");
-  form.id = "harness-form";
+  pick.id = "console-tool";
+  const form = el("div", "console-form");
+  form.id = "console-form";
   const path = el("p", "muted");
-  path.id = "harness-path";
+  path.id = "console-path";
   const invoke = el("button", "btn", "Invoke");
   invoke.type = "button";
-  invoke.id = "harness-invoke";
+  invoke.id = "console-invoke";
   const abort = el("button", "btn btn-outline", "Cancel call (abort signal)");
   abort.type = "button";
-  abort.id = "harness-abort";
+  abort.id = "console-abort";
   abort.disabled = true;
   const status = el("p", "muted");
-  status.id = "harness-status";
-  const output = el("pre", "harness-output");
-  output.id = "harness-output";
+  status.id = "console-status";
+  const output = el("pre", "console-output");
+  output.id = "console-output";
   const actions = el("div", "card-actions");
   actions.append(invoke, abort);
   section.append(pickLabel, pick, form, path, actions, status, output);
@@ -106,10 +111,10 @@ export function mountHarness(container: HTMLElement, registry: ToolRegistry): { 
   function rebuild(): void {
     form.replaceChildren();
     const tool = current();
-    fields = buildFields(tool?.inputSchema, form, "harness");
+    fields = buildFields(tool?.inputSchema, form, "console");
     const mc = document.modelContext;
     path.textContent = typeof mc?.executeTool === "function"
-      ? `Path: document.modelContext.executeTool${mc.__polyfill ? " (polyfill)" : ""}`
+      ? `Path: document.modelContext.executeTool${mc.__polyfill ? " (polyfill, object argument)" : " (native: JSON string argument first, object on UnknownError)"}`
       : "Path: registered definition's execute (no executeTool available)";
   }
 
@@ -127,20 +132,36 @@ export function mountHarness(container: HTMLElement, registry: ToolRegistry): { 
 
   pick.addEventListener("change", rebuild);
 
+  let lastPath = "";
+
   /** Invokes a tool the way an agent would; returns the raw JSON string the agent would receive. */
   async function invokeTool(tool: ModelContextTool, input: unknown, signal: AbortSignal): Promise<string> {
     const mc = document.modelContext;
     if (mc && typeof mc.executeTool === "function" && typeof mc.getTools === "function") {
       const registered = (await mc.getTools()).find((t) => t.name === tool.name);
       if (!registered) throw new Error(`${tool.name} is not registered with the browser`);
-      return mc.executeTool(registered, input, { signal });
+      if (mc.__polyfill) {
+        lastPath = "document.modelContext.executeTool (polyfill, object argument)";
+        return mc.executeTool(registered, input, { signal });
+      }
+      try {
+        const raw = await mc.executeTool(registered, JSON.stringify(input), { signal });
+        lastPath = "document.modelContext.executeTool (native, JSON string argument)";
+        return raw;
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "UnknownError")) throw error;
+        const raw = await mc.executeTool(registered, input, { signal });
+        lastPath = "document.modelContext.executeTool (native, object argument after the string form was rejected)";
+        return raw;
+      }
     }
+    lastPath = "registered definition's execute (no executeTool available)";
     const value = await tool.execute(JSON.parse(JSON.stringify(input)), { signal });
     return JSON.stringify(value === undefined ? null : value);
   }
 
-  // Lets the e2e test drive the harness path in browsers whose native API has no executeTool.
-  (window as unknown as { __harnessInvoke?: unknown }).__harnessInvoke = (name: string, input: unknown, signal?: AbortSignal) => {
+  // Lets the e2e test drive the console path in browsers whose native API has no executeTool.
+  (window as unknown as { __consoleInvoke?: unknown }).__consoleInvoke = (name: string, input: unknown, signal?: AbortSignal) => {
     const tool = registry.definitions.get(name);
     if (!tool) return Promise.reject(new Error(`unknown tool ${name}`));
     return invokeTool(tool, input, signal ?? new AbortController().signal);
@@ -160,6 +181,7 @@ export function mountHarness(container: HTMLElement, registry: ToolRegistry): { 
       const raw = await invokeTool(tool, input, controller.signal);
       output.textContent = JSON.stringify(JSON.parse(raw), null, 2);
       status.textContent = `Resolved after ${Math.round(performance.now() - started)} ms`;
+      path.textContent = `Path: ${lastPath}`;
     } catch (error) {
       output.textContent = String(error);
       status.textContent = `Rejected after ${Math.round(performance.now() - started)} ms`;
@@ -171,7 +193,7 @@ export function mountHarness(container: HTMLElement, registry: ToolRegistry): { 
   });
 
   abort.addEventListener("click", () => {
-    controller?.abort(new DOMException("cancelled from the harness", "AbortError"));
+    controller?.abort(new DOMException("cancelled from the console", "AbortError"));
   });
 
   update();

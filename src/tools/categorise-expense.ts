@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 import { CATEGORIES, type Category, type Expense, type Store } from "../data/fixture";
 import type { GovernedTool } from "../gate/gate";
@@ -18,6 +18,7 @@ export function categoriseExpenseTool(store: Store): GovernedTool<CategoriseInpu
     class: "gated",
     summary: "Assign a category to an expense.",
     why: "This changes another person's record",
+    reversal: "Cost of reversal: low. A later proposal can set a different category.",
     returns: '{status:"ok", expense}',
     inputSchema: {
       type: "object",

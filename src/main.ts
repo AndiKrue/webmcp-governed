@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // Entry point: detect the WebMCP surface, build the gate, register the tools, mount the page.
 
@@ -13,7 +13,7 @@ import { Ledger } from "./ledger/ledger";
 import { createTools } from "./tools";
 import { mountCards } from "./ui/card";
 import { mountDiagnostics } from "./ui/diagnostics";
-import { mountHarness } from "./ui/harness";
+import { mountConsole } from "./ui/console";
 import { mountLedgerView } from "./ui/ledger-view";
 import { mountTable } from "./ui/table";
 import { installModelContext } from "./webmcp/polyfill";
@@ -112,7 +112,7 @@ async function boot(): Promise<void> {
   }));
   gate.subscribe(() => diagnostics.update());
 
-  const harness = params.get("harness") === "1" ? mountHarness(main, registry) : null;
+  const console = params.get("console") === "1" ? mountConsole(main, registry) : null;
 
   const reset = document.createElement("button");
   reset.type = "button";
@@ -147,7 +147,7 @@ async function boot(): Promise<void> {
   transportSelect.addEventListener("change", () => {
     void switchTransport(transportSelect.value as TransportName).then(() => {
       diagnostics.update();
-      harness?.update();
+      console?.update();
     });
   });
   transportLabel.append(transportSelect);
@@ -159,7 +159,7 @@ async function boot(): Promise<void> {
 
   await registerTools();
   diagnostics.update();
-  harness?.update();
+  console?.update();
   document.body.dataset["ready"] = "1";
 }
 

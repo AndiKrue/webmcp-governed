@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // The seeded team budget for 2026-08. Four fictional members, in-memory state, reseeded on reload or
 // on "Reset to fixture". Amounts are decimal strings with two places.

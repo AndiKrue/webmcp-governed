@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // The approval card. Inline, one per pending proposal, oldest first, each decided independently.
 // The gate enforces every rule; the card only reflects them (the Approve button for a sealed
@@ -135,7 +135,8 @@ export function mountCards(container: HTMLElement, gate: Gate): { update(): void
     declineActions.append(confirmDecline, cancelDecline);
     declineForm.append(reasonLabel, reason, hintLabel, hint, declineActions);
 
-    root.append(error, actions, declineForm);
+    const reversal = el("p", "card-reversal", proposal.tool.reversal ?? (sealed ? "Cost of reversal: total. There is no undo." : "Cost of reversal: low. A later proposal can change it again."));
+    root.append(error, actions, reversal, declineForm);
 
     approve.addEventListener("click", () => {
       const outcome = gate.decide(proposal.id, "approve", confirmInput ? { confirmation: confirmInput.value } : {});

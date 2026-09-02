@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // A small, dependency-free implementation of the `document.modelContext` surface described by the
 // WebMCP draft (https://webmachinelearning.github.io/webmcp/). It exists so the page works without an
-// agent attached: the in-page harness and the tests drive tools through the same methods a real
+// agent attached: the in-page console and the tests drive tools through the same methods a real
 // client would call. Installed in full only when the browser offers nothing. When the browser offers
 // a partial object (Chrome 148 behind its flag has `registerTool` only), each missing method is added
 // on top of the native one, and native `registerTool` still receives every registration.
@@ -119,6 +119,17 @@ class ModelContextPolyfill extends EventTarget implements ModelContext {
     }
     const caller = options.signal;
     if (caller?.aborted) return Promise.reject(abortReason(caller));
+    // The draft IDL takes an object; Chrome 150 takes a JSON string. Accept both.
+    let parsed: unknown;
+    if (typeof input === "string") {
+      try {
+        parsed = JSON.parse(input);
+      } catch {
+        return Promise.reject(new DOMException("Failed to parse input arguments", "UnknownError"));
+      }
+    } else {
+      parsed = input ?? {};
+    }
     const controller = new AbortController();
     return new Promise<string>((resolve, reject) => {
       caller?.addEventListener(
@@ -130,7 +141,7 @@ class ModelContextPolyfill extends EventTarget implements ModelContext {
         { once: true },
       );
       Promise.resolve()
-        .then(() => tool.execute(deepCopy(input ?? {}), { signal: controller.signal }))
+        .then(() => tool.execute(deepCopy(parsed), { signal: controller.signal }))
         .then(
           (value) => resolve(JSON.stringify(value === undefined ? null : value)),
           (error: unknown) => {

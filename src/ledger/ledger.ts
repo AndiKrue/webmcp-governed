@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // Append-only, in-memory ledger. A row id is reserved when a proposal is made and the row is appended
 // when the proposal settles, so ids are stable and rows are never edited. Not signed: this is a log.

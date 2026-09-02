@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 // End-to-end demo path. Run `npm run build` first: this serves `dist/` with `vite preview` and drives
 // the page in headless Chrome for Testing through `document.modelContext`.
@@ -68,7 +68,7 @@ async function invoke(page, name, input) {
         const tool = (await mc.getTools()).find((t) => t.name === name);
         return mc.executeTool(tool, input);
       }
-      return window.__harnessInvoke(name, input);
+      return window.__consoleInvoke(name, input);
     },
     name,
     input,
@@ -87,7 +87,7 @@ async function invokeLater(page, name, input) {
           const tool = (await mc.getTools()).find((t) => t.name === name);
           return mc.executeTool(tool, input);
         }
-        return window.__harnessInvoke(name, input);
+        return window.__consoleInvoke(name, input);
       };
       window[key] = start().then((raw) => ({ raw }), (error) => ({ error: String(error) }));
     },
@@ -121,7 +121,7 @@ async function demoPath(browser, { transport, mode }) {
   const label = `${mode}/${transport}`;
   console.log(`demo path (${label})`);
   const query = mode === "native" ? "nopolyfill=1" : "nopolyfill=0";
-  const { page, errors, external } = await openPage(browser, `/?${query}&harness=1&transport=${transport}`);
+  const { page, errors, external } = await openPage(browser, `/?${query}&console=1&transport=${transport}`);
   const cdp = await page.createCDPSession();
   await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DOWNLOADS, eventsEnabled: true });
 
@@ -151,13 +151,32 @@ async function demoPath(browser, { transport, mode }) {
     const diag = await page.$eval("#diagnostics", (el) => el.textContent);
     check(/\(registerTool[^)]*\)/.test(diag), `diagnostics name the native methods (${diag.match(/API.*?Transport/)?.[0] ?? diag.slice(0, 160)})`);
     check(!(await page.evaluate(() => document.modelContext.__polyfill)), "native object is not the polyfill");
+    await page.select("#console-tool", "find_duplicates");
+    await page.click("#console-invoke");
+    await page.waitForFunction(() => document.getElementById("console-output").textContent.includes('"pairs"'));
+    const nativePath = await page.$eval("#console-path", (el) => el.textContent);
+    check(nativePath.includes("native, JSON string argument"), `console used the JSON string form against the native object (${nativePath})`);
   }
 
+  // 0. both executeTool argument shapes: object (draft IDL) and JSON string (Chrome 150)
+  const shapes = await page.evaluate(async () => {
+    const mc = document.modelContext;
+    const tool = (await mc.getTools()).find((t) => t.name === "summarise_month");
+    const asObject = JSON.parse(await mc.executeTool(tool, { month: "2026-08" }));
+    const asString = JSON.parse(await mc.executeTool(tool, JSON.stringify({ month: "2026-08" })));
+    const bad = await mc.executeTool(tool, "{not json").then(() => "resolved", (e) => `${e.name}: ${e.message}`);
+    return { asObject: asObject.status, asString: asString.status, sameTotal: asObject.total === asString.total, bad };
+  });
+  check(shapes.asObject === "ok" && shapes.asString === "ok" && shapes.sameTotal, `executeTool accepts an object and a JSON string (${JSON.stringify(shapes)})`);
+  check(shapes.bad === "UnknownError: Failed to parse input arguments", `malformed JSON string rejects as UnknownError (${shapes.bad})`);
+
   // 1. open call: runs at once, no card
+  const rowsBefore = (await page.$$(".ledger-row")).length;
   const open = await invoke(page, "list_expenses", { category: "uncategorised" });
   check(open.status === "ok" && open.count === 3, `open call resolves at once (count=${open.count})`);
   check((await page.$$(".card")).length === 0, "open call produced no card");
-  check(open.receipt_id === "L-0001", `open call carries receipt_id ${open.receipt_id}`);
+  const expectedReceipt = `L-${String(rowsBefore + 1).padStart(4, "0")}`;
+  check(open.receipt_id === expectedReceipt, `open call carries receipt_id ${open.receipt_id} (the next ledger row)`);
 
   // 2. gated call approved
   const cat = await invokeLater(page, "categorise_expense", { expense_id: "E-007", category: "software" });
@@ -248,7 +267,7 @@ async function demoPath(browser, { transport, mode }) {
       const tool = (await mc.getTools()).find((t) => t.name === "flag_expense");
       promise = mc.executeTool(tool, { expense_id: "E-011", reason: "probe" }, { signal: controller.signal });
     } else {
-      promise = window.__harnessInvoke("flag_expense", { expense_id: "E-011", reason: "probe" }, controller.signal);
+      promise = window.__consoleInvoke("flag_expense", { expense_id: "E-011", reason: "probe" }, controller.signal);
     }
     await new Promise((r) => setTimeout(r, 50));
     const cardsBefore = document.querySelectorAll(".card").length;
@@ -306,7 +325,7 @@ async function demoPath(browser, { transport, mode }) {
 async function surfaceChecks(browser) {
   console.log("surface checks (polyfill)");
   const bare = await openPage(browser, "/");
-  check((await bare.page.$("#harness")) === null, "bare URL shows no harness");
+  check((await bare.page.$("#console")) === null, "bare URL shows no console");
   check((await bare.page.$eval("#status-badges", (el) => el.textContent)).includes("transport: hold"), "default transport is hold");
   check((await bare.page.$("#diagnostics")).evaluate((el) => el.hidden), "diagnostics hidden until toggled");
   await bare.page.click("#diagnostics-toggle");
@@ -326,18 +345,20 @@ async function surfaceChecks(browser) {
   check(bare.errors.length === 0 && bare.external.length === 0, "bare page: no console errors, no outbound requests");
   await bare.page.close();
 
-  const harness = await openPage(browser, "/?harness=1");
-  check((await harness.page.$("#harness")) !== null, "?harness=1 shows the harness");
-  await harness.page.select("#harness-tool", "summarise_month");
-  await harness.page.click("#harness-invoke");
-  await harness.page.waitForFunction(() => document.getElementById("harness-output").textContent.includes('"status"'));
-  const out = await harness.page.$eval("#harness-output", (el) => el.textContent);
-  check(out.includes('"ok"') && out.includes("by_member"), "harness invokes through executeTool and shows the raw value");
+  const withConsole = await openPage(browser, "/?console=1");
+  check((await withConsole.page.$("#console")) !== null, "?console=1 shows the console");
+  await withConsole.page.select("#console-tool", "summarise_month");
+  await withConsole.page.click("#console-invoke");
+  await withConsole.page.waitForFunction(() => document.getElementById("console-output").textContent.includes('"status"'));
+  const out = await withConsole.page.$eval("#console-output", (el) => el.textContent);
+  check(out.includes('"ok"') && out.includes("by_member"), "console invokes through executeTool and shows the raw value");
+  const pathText = await withConsole.page.$eval("#console-path", (el) => el.textContent);
+  check(pathText.includes("polyfill, object argument"), `console reports the argument shape it used (${pathText})`);
   // in-page transport switch re-registers tools
-  await harness.page.select("#transport-select", "two-call");
-  await harness.page.waitForFunction(async () => (await document.modelContext.getTools()).some((t) => t.name === "commit_approved_action"));
+  await withConsole.page.select("#transport-select", "two-call");
+  await withConsole.page.waitForFunction(async () => (await document.modelContext.getTools()).some((t) => t.name === "commit_approved_action"));
   check(true, "switching transport in place registers commit_approved_action");
-  await harness.page.close();
+  await withConsole.page.close();
 
   const none = await openPage(browser, "/?nopolyfill=1");
   check((await none.page.$eval("#status-badges", (el) => el.textContent)).includes("no WebMCP API"), "?nopolyfill=1 without a native API shows 'no WebMCP API'");

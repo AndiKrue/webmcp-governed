@@ -1,8 +1,9 @@
-# Governed Tool Calls
+# Ask First
 
 A WebMCP demo: an agent proposes consequential actions through tools registered with
 `document.modelContext.registerTool`, and a human approves or declines each one on the page, with an
-append-only ledger as the receipt. Built for the WebMCP Challenge. Product name: "Governed Tool Calls".
+append-only ledger as the receipt. Built for the WebMCP Challenge. Product name: "Ask First". Vocabulary: propose, approve, decline,
+receipt, ledger, open / gated / sealed. The agent stand-in is the "tool console" (`?console=1`).
 
 ## Commands
 
@@ -27,7 +28,7 @@ src/gate/{gate,config,transport-hold,transport-twocall}.ts   the approval gate a
 src/ledger/ledger.ts                        append-only in-memory ledger
 src/data/fixture.ts                         the seeded team budget
 src/tools/*.ts                              the seven tools
-src/ui/{table,card,ledger-view,diagnostics,harness}.ts
+src/ui/{table,card,ledger-view,diagnostics,console}.ts
 tests/*.test.ts  e2e/smoke.mjs  e2e/native-probe.mjs  scripts/check-headers.mjs
 docs/VERIFICATION.md  SUBMISSION.md  VIDEO-SHOTLIST.md
 .github/workflows/check.yml                 npm ci && npm run check on push and PR (no e2e)
@@ -46,17 +47,19 @@ abandon held `execute` promises.
   organisation name.
 - Licence is AGPL-3.0-or-later. Never modify `LICENSE`. Every `.ts`, `.mjs`, `.css` and `.html` file
   starts with the SPDX header (`SPDX-License-Identifier: AGPL-3.0-or-later`, copyright Andreas
-  Krueger, "This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.").
+  Krueger, "This file is part of Ask First, a WebMCP demo. See LICENSE.").
 - README claims must match what is built. Keep the "What this is not" section. Never describe the
   ledger as evidence, signed, or tamper-proof.
 - Write the WebMCP code here; do not copy from other demos or polyfills.
 - State is in memory by design — do not add persistence, auth, signing, or multi-user.
 - The page makes no runtime requests: no CDN fonts, no analytics. `index.html` is a single route;
   never navigate, because `executeTool` returns null on navigation.
-- `?harness=1` exposes `window.__harnessInvoke` for the e2e test; judges opening the bare URL see
-  no harness.
+- `?console=1` exposes `window.__consoleInvoke` for the e2e test; judges opening the bare URL see
+  no console.
 - `installModelContext` feature-detects per method: a complete native object is left alone, a partial
   one (Chrome 148: `navigator.modelContext` with `registerTool` only) keeps native `registerTool` and
   gets the missing methods added; the full polyfill is installed only when nothing exists.
+- `executeTool` input: the draft IDL takes an object, Chrome 150 takes a JSON string. The polyfill
+  accepts both; the console sends the string form first to a native API.
 - `execute` never throws: refusals, validation failures and pending states are resolved JSON values,
   because a rejected promise reaches the agent as an opaque `UnknownError`.

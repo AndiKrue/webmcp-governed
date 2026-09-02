@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Andreas Krueger
-// This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+// This file is part of Ask First, a WebMCP demo. See LICENSE.
 
 import { formatMoney, type Draft, type Payment, type Store } from "../data/fixture";
 import type { GovernedTool } from "../gate/gate";
@@ -17,6 +17,7 @@ export function payReimbursementTool(store: Store, now: () => Date = () => new D
     class: "sealed",
     summary: "Pay a reimbursement draft.",
     why: "Money leaves the budget and there is no undo",
+    reversal: "Cost of reversal: total. There is no undo; the money is gone once this is approved.",
     returns: '{status:"ok", payment}',
     inputSchema: {
       type: "object",
