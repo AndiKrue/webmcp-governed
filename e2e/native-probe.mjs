@@ -46,14 +46,22 @@ async function main() {
       });
       version = await browser.version();
       const page = await browser.newPage();
+      // Capture what the browser provides before the page's own script can alias or shim anything.
+      await page.evaluateOnNewDocument(() => {
+        const methods = (target) => {
+          const mc = target.modelContext;
+          return mc ? Object.getOwnPropertyNames(Object.getPrototypeOf(mc)).filter((n) => n !== "constructor") : null;
+        };
+        window.__before = { document: methods(document), navigator: methods(navigator) };
+      });
       await page.goto(`${BASE}/?nopolyfill=1`, { waitUntil: "networkidle0" });
       const probe = await page.evaluate(() => ({
-        documentHas: "modelContext" in document,
-        navigatorHas: "modelContext" in navigator,
+        before: window.__before,
         badge: document.getElementById("status-badges")?.textContent ?? "",
       }));
       results.push({ flags, ...probe });
-      console.log(`${flags.join(" ")}: document=${probe.documentHas} navigator=${probe.navigatorHas}`);
+      const fmt = (m) => (m ? `[${m.join(", ")}]` : "absent");
+      console.log(`${flags.join(" ")}: document=${fmt(probe.before.document)} navigator=${fmt(probe.before.navigator)}`);
       await browser.close();
     }
   } finally {

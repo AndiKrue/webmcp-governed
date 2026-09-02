@@ -55,5 +55,8 @@ abandon held `execute` promises.
   never navigate, because `executeTool` returns null on navigation.
 - `?harness=1` exposes `window.__harnessInvoke` for the e2e test; judges opening the bare URL see
   no harness.
+- `installModelContext` feature-detects per method: a complete native object is left alone, a partial
+  one (Chrome 148: `navigator.modelContext` with `registerTool` only) keeps native `registerTool` and
+  gets the missing methods added; the full polyfill is installed only when nothing exists.
 - `execute` never throws: refusals, validation failures and pending states are resolved JSON values,
   because a rejected promise reaches the agent as an opaque `UnknownError`.

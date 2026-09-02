@@ -23,7 +23,8 @@ import type { ApiMode } from "./webmcp/types";
 const TRANSPORTS: Record<TransportName, Transport> = { hold: holdTransport, "two-call": twoCallTransport };
 
 const params = new URLSearchParams(location.search);
-const api: ApiMode = installModelContext(params.get("nopolyfill") !== "1");
+const apiReport = installModelContext(params.get("nopolyfill") !== "1");
+const api: ApiMode = apiReport.mode;
 const store = new Store();
 const ledger = new Ledger();
 const gate = new Gate({ ledger, transport: TRANSPORTS[resolveTransport(location.search)], api });
@@ -37,11 +38,12 @@ if (typeof document.modelContext?.addEventListener === "function") {
 }
 
 function apiDetail(mode: ApiMode): string {
+  const shimmed = apiReport.shimmed.length ? `; shimmed by the page: ${apiReport.shimmed.join(", ")}` : "";
   switch (mode) {
     case "native":
-      return "document.modelContext provided by the browser";
+      return `document.modelContext provided by the browser (${apiReport.native.join(", ")})${shimmed}`;
     case "aliased":
-      return "navigator.modelContext aliased onto document";
+      return `navigator.modelContext aliased onto document (${apiReport.native.join(", ")})${shimmed}`;
     case "polyfill":
       return "in-page polyfill, no agent attached";
     case "none":
@@ -61,7 +63,9 @@ function renderBadges(): void {
   if (!badges) return;
   badges.replaceChildren(
     badge(
-      api === "native" || api === "aliased" ? "native WebMCP" : api === "polyfill" ? "polyfill — no agent attached" : "no WebMCP API",
+      api === "native" || api === "aliased"
+        ? apiReport.shimmed.length ? "native WebMCP (partial, completed by the page)" : "native WebMCP"
+        : api === "polyfill" ? "polyfill — no agent attached" : "no WebMCP API",
       `badge-${api}`,
     ),
     badge(`transport: ${gate.transport.name}`, "badge-transport"),

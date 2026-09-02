@@ -107,10 +107,10 @@ export function mountHarness(container: HTMLElement, registry: ToolRegistry): { 
     form.replaceChildren();
     const tool = current();
     fields = buildFields(tool?.inputSchema, form, "harness");
-    const native = typeof document.modelContext?.executeTool === "function";
-    path.textContent = native
-      ? "Path: document.modelContext.executeTool"
-      : "Path: registered definition's execute (browser exposes no executeTool)";
+    const mc = document.modelContext;
+    path.textContent = typeof mc?.executeTool === "function"
+      ? `Path: document.modelContext.executeTool${mc.__polyfill ? " (polyfill)" : ""}`
+      : "Path: registered definition's execute (no executeTool available)";
   }
 
   function update(): void {

@@ -88,7 +88,9 @@ Ask the agent to list this month's uncategorised expenses. Then ask it to catego
 with a reason, and watch it come back. Then ask it to pay draft D-001.
 
 Without an agent the page installs its own small `document.modelContext` (the header badge says
-*polyfill — no agent attached*) so everything still runs. Add `?harness=1` to get a form that calls
+*polyfill — no agent attached*) so everything still runs. Feature detection is per method: a browser
+that provides only part of the surface keeps what it has and gets the rest added (the badge then says
+*native WebMCP (partial, completed by the page)*). Add `?harness=1` to get a form that calls
 tools the way an agent would. Add `?transport=two-call` to try the fallback transport (the default is
 `hold`; the constant lives in `src/gate/config.ts`). Add `?nopolyfill=1` to see what the browser
 provides on its own.
@@ -148,9 +150,11 @@ any `cancelled_by_caller` rows are how you can tell, from any client, whether it
 ## Verification status
 
 See [docs/VERIFICATION.md](docs/VERIFICATION.md): unit tests, an end-to-end run through
-`document.modelContext.executeTool` in headless Chrome for Testing 148 in both transports, and a native
-probe of that build's own `modelContext` (it exposes `registerTool` only). The ChatGPT in-app browser
-and Chrome 149+ with the flag remain to be tried on the deployed URL.
+`document.modelContext.executeTool` in headless Chrome for Testing 148 in both transports, and a
+probe of that build's own API (`navigator.modelContext` with `registerTool` only; the page aliases it
+and adds the missing methods per feature detection). Chrome 150 with the flag provides the complete
+`document.modelContext` and registered the tools natively. The ChatGPT in-app browser remains to be
+tried on the deployed URL.
 
 ## What this is not
 

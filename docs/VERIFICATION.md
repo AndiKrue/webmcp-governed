@@ -2,9 +2,16 @@
 
 What was verified, where, and what remains for the author. Everything below was run from a fresh
 `npm ci` on Node 22 on Linux x86_64. "Polyfill" means the page's own `document.modelContext`
-implementation (`src/webmcp/polyfill.ts`), installed only when the browser offers none. "Native" means
-Chrome for Testing 148.0.7778.97 (the build Puppeteer 24 downloads) launched with
-`--enable-features=WebMCPTesting`.
+implementation (`src/webmcp/polyfill.ts`), installed in full only when the browser offers none.
+"Native" means a browser-provided `modelContext`. Two native cases are known so far:
+
+| Browser | Where the API lives | Methods provided | What the page does |
+|---|---|---|---|
+| Chrome for Testing 148.0.7778.97 (Linux, Puppeteer's build) with `--enable-features=WebMCPTesting` or any of the other flags below | `navigator.modelContext` only | `registerTool` | aliases it onto `document`, keeps native `registerTool`, adds `getTools`, `executeTool` and `toolchange` on top (badge: *native WebMCP (partial, completed by the page)*) |
+| Chrome 150.0.7871.182 (Windows) with `chrome://flags/#enable-webmcp-testing`, reported by the author on the deployed preview with `?nopolyfill=1` | `document.modelContext` | `registerTool`, `getTools`, `executeTool`, `ontoolchange` | nothing added; registration succeeded natively and `getTools()` listed the registered tool (badge: *native WebMCP*) |
+
+Feature detection is per method (`installModelContext` in `src/webmcp/polyfill.ts` returns which
+methods were native and which were shimmed; the diagnostics panel shows both).
 
 ## Verified here
 
@@ -17,26 +24,28 @@ Chrome for Testing 148.0.7778.97 (the build Puppeteer 24 downloads) launched wit
 | Fixture invariants: 26 expenses, 4 members, exactly 2 near-duplicate pairs, exactly 3 uncategorised (one a Notion subscription), D-001 = 340.00 EUR to Contractor X for invoice 2026-114, D-002 plainly must not be paid | unit tests (`tests/fixture.test.ts`) | green |
 | The seven tools: success values, `invalid` on bad ids / foreign expenses / uncategorised or flagged expenses in a draft / already drafted or paid / empty reason; effect-line text; `commit_approved_action` only under two-call | unit tests (`tests/tools.test.ts`) | green |
 | Full demo path through `document.modelContext.executeTool`: open call with no card; gated approve; gated decline with reason reaching the caller as a structured refusal, then a re-proposal with different arguments; sealed payment with wrong amount refused (also when the button is forced) and right amount paying, draft and expense turning `paid`; must-not-pay draft declined with `never`; caller abort withdrawing the card and writing `cancelled_by_caller`; export download containing every decision kind with `latency_ms`; reset | Polyfill, Chrome 148 headless, both transports (`npm run e2e`) | green, 175 checks |
-| Same demo path in native mode | Chrome 148 + `WebMCPTesting`, both transports (`npm run e2e -- --native`) | green; see the caveat below |
+| Same demo path in native mode, plus: diagnostics name the native and shimmed methods, the object is not the polyfill | Chrome 148 + `WebMCPTesting`, both transports (`npm run e2e -- --native`) | green; see the caveat below |
+| Per-method completion: full polyfill when nothing exists; complete native object untouched; `registerTool`-only object gains the other three with native `registerTool` still called for every registration; `navigator`-only object aliased and completed | unit tests (`tests/shim.test.ts`) | green |
 | Bare URL shows no harness; `?harness=1` shows it; `?transport=two-call` registers `commit_approved_action`; default transport is `hold`; in-page transport switch re-registers tools; `toolchange` fires once per change for `ontoolchange` and for listeners | Polyfill, Chrome 148 | green |
 | No console errors and no outbound requests on the bare page, with `?nopolyfill=1`, and along the demo path | Chrome 148, Puppeteer request logging | green |
 | `npm run build` writes `dist/index.html`; `vite preview` serves it at `/` | Node 22 | green |
 
 ## Native probe (Chrome for Testing 148.0.7778.97)
 
-`e2e/native-probe.mjs` loaded `/?nopolyfill=1` under five flag sets. With every one of
-`--enable-features=WebMCPTesting`, `--enable-features=WebMCP`, `--enable-features=WebMCP,WebMCPTesting`,
-`--enable-experimental-web-platform-features` and `--enable-blink-features=WebMCP` the page got a
-native `ModelContext` object on both `document` and `navigator` (the same object). Without a flag
-there is none.
+`e2e/native-probe.mjs` loads `/?nopolyfill=1` under five flag sets and records the API shape before
+the page's script runs. With every one of `--enable-features=WebMCPTesting`,
+`--enable-features=WebMCP`, `--enable-features=WebMCP,WebMCPTesting`,
+`--enable-experimental-web-platform-features` and `--enable-blink-features=WebMCP` the browser
+provides `navigator.modelContext` with **only `registerTool`** on its prototype; `document.modelContext`
+is absent. Without a flag there is nothing on either.
 
-Caveat: that object's prototype has **only `registerTool`**. There is no `getTools`, no `executeTool`,
-and it is not an `EventTarget`. Registration of all seven tools succeeds natively (a duplicate name is
-refused with `InvalidStateError`), but nothing in that build can invoke a tool, so the native e2e run
-drives calls through the registered definitions' `execute` (the same gate path, via the harness hook)
-rather than through a browser `executeTool`. Whether a real client keeps a 15-second pending gated
-call open could therefore **not** be observed here. The ledger's `latency_ms` and any
-`cancelled_by_caller` rows are how the author reads that from the ChatGPT test.
+Caveat: registration of all seven tools succeeds natively in that build (a duplicate name is refused
+with `InvalidStateError`), but nothing in it can invoke a tool, so the native e2e run calls through
+the page-added `executeTool`, which reaches the same registered `execute` and the same gate. Whether
+a real client keeps a 15-second pending gated call open could therefore **not** be observed here. The
+ledger's `latency_ms` and any `cancelled_by_caller` rows are how the author reads that from the
+ChatGPT test. Chrome 150 (see the table above) has the complete surface, so that observation is
+possible there once an agent is attached.
 
 ## Remaining for the author
 

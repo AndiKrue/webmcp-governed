@@ -144,8 +144,13 @@ async function demoPath(browser, { transport, mode }) {
     );
     check(JSON.stringify(readOnly) === JSON.stringify(["find_duplicates", "list_expenses", "summarise_month"]), `readOnlyHint only on the three open tools`);
   } else {
+    check(false, "getTools() is available (native or shimmed)");
+  }
+  if (mode === "native") {
+    await page.click("#diagnostics-toggle");
     const diag = await page.$eval("#diagnostics", (el) => el.textContent);
-    check(diag.includes("pay_reimbursement"), "diagnostics list the registered tools (native API has no getTools)");
+    check(/\(registerTool[^)]*\)/.test(diag), `diagnostics name the native methods (${diag.match(/API.*?Transport/)?.[0] ?? diag.slice(0, 160)})`);
+    check(!(await page.evaluate(() => document.modelContext.__polyfill)), "native object is not the polyfill");
   }
 
   // 1. open call: runs at once, no card
@@ -364,7 +369,7 @@ async function main() {
       });
       await probe.close();
       summary.native = shape;
-      console.log(`native modelContext: ${shape ? shape.join(", ") : "absent"}`);
+      console.log(`native modelContext prototype: ${shape ? shape.join(", ") : "absent"}`);
       if (shape) {
         await demoPath(native, { transport: "hold", mode: "native" });
         await demoPath(native, { transport: "two-call", mode: "native" });
