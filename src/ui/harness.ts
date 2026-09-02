@@ -127,6 +127,25 @@ export function mountHarness(container: HTMLElement, registry: ToolRegistry): { 
 
   pick.addEventListener("change", rebuild);
 
+  /** Invokes a tool the way an agent would; returns the raw JSON string the agent would receive. */
+  async function invokeTool(tool: ModelContextTool, input: unknown, signal: AbortSignal): Promise<string> {
+    const mc = document.modelContext;
+    if (mc && typeof mc.executeTool === "function" && typeof mc.getTools === "function") {
+      const registered = (await mc.getTools()).find((t) => t.name === tool.name);
+      if (!registered) throw new Error(`${tool.name} is not registered with the browser`);
+      return mc.executeTool(registered, input, { signal });
+    }
+    const value = await tool.execute(JSON.parse(JSON.stringify(input)), { signal });
+    return JSON.stringify(value === undefined ? null : value);
+  }
+
+  // Lets the e2e test drive the harness path in browsers whose native API has no executeTool.
+  (window as unknown as { __harnessInvoke?: unknown }).__harnessInvoke = (name: string, input: unknown, signal?: AbortSignal) => {
+    const tool = registry.definitions.get(name);
+    if (!tool) return Promise.reject(new Error(`unknown tool ${name}`));
+    return invokeTool(tool, input, signal ?? new AbortController().signal);
+  };
+
   invoke.addEventListener("click", async () => {
     const tool = current();
     if (!tool) return;
@@ -138,16 +157,7 @@ export function mountHarness(container: HTMLElement, registry: ToolRegistry): { 
     output.textContent = "";
     const started = performance.now();
     try {
-      let raw: string;
-      const mc = document.modelContext;
-      if (mc && typeof mc.executeTool === "function" && typeof mc.getTools === "function") {
-        const registered = (await mc.getTools()).find((t) => t.name === tool.name);
-        if (!registered) throw new Error(`${tool.name} is not registered with the browser`);
-        raw = await mc.executeTool(registered, input, { signal: controller.signal });
-      } else {
-        const value = await tool.execute(JSON.parse(JSON.stringify(input)), { signal: controller.signal });
-        raw = JSON.stringify(value === undefined ? null : value);
-      }
+      const raw = await invokeTool(tool, input, controller.signal);
       output.textContent = JSON.stringify(JSON.parse(raw), null, 2);
       status.textContent = `Resolved after ${Math.round(performance.now() - started)} ms`;
     } catch (error) {
