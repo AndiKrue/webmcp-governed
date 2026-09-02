@@ -1,4 +1,4 @@
-# Governed Tool Calls — submission text
+# Submission text
 
 ## Why this use case fits WebMCP
 
@@ -29,8 +29,8 @@ and sealed tools become a proposal whose promise is held until the human decides
 the real result or the structured refusal. Refusals are resolved values because a rejected promise
 reaches the caller as an opaque `UnknownError`. `options.signal` is honoured: an aborting caller gets
 a `cancelled_by_caller` row and the card is withdrawn. A two-call transport (token plus
-`commit_approved_action`) covers clients that will not hold a call open. The WebMCP explainer lists
-user prompting and elicitation as an open question (issues #165 and #50); this demo is a page-level
+`commit_approved_action`) covers clients that will not hold a call open. The explainer lists
+user prompting and elicitation as an open question (issues #165, #50); this demo is a page-level
 answer using only the existing primitive, a held `execute` promise.
 
 ## Deliberately not built
