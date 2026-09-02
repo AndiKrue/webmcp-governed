@@ -40,3 +40,27 @@ body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
   display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
   padding: 0.75rem 1.5rem; border-top: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 0.9rem;
 }
+
+.badge {
+  display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted); margin-left: 0.4rem;
+}
+.badge-native, .badge-aliased { border-color: var(--ok); color: var(--ok); }
+.badge-none { border-color: var(--sealed); color: var(--sealed); }
+
+.btn {
+  font: inherit; padding: 0.45rem 0.9rem; border-radius: var(--radius); border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink); cursor: pointer;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline { background: var(--panel); color: var(--accent); }
+.btn-link { background: none; border: none; color: var(--accent); padding: 0; text-decoration: underline; }
+.btn:focus-visible { outline: 3px solid #9cc1ff; outline-offset: 2px; }
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+.diagnostics { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin-top: 1rem; font-size: 0.9rem; }
+.diagnostics h2 { margin: 0 0 0.5rem; font-size: 1rem; }
+.diagnostics dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0 0 0.75rem; }
+.diagnostics dt { color: var(--muted); }
+.diagnostics dd { margin: 0; overflow-wrap: anywhere; }
+.diagnostics pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.8rem; }
