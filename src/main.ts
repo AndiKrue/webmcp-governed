@@ -16,7 +16,7 @@ const transport = params.get("transport") === "two-call" ? "two-call" : "hold";
 
 const registry = new ToolRegistry();
 let lastToolChange: string | null = null;
-document.modelContext?.addEventListener("toolchange", () => {
+if (typeof document.modelContext?.addEventListener === "function") document.modelContext.addEventListener("toolchange", () => {
   lastToolChange = new Date().toISOString();
 });
 
