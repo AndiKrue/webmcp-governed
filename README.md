@@ -157,8 +157,9 @@ See [docs/VERIFICATION.md](docs/VERIFICATION.md): unit tests, an end-to-end run 
 `document.modelContext.executeTool` in headless Chrome for Testing 148 in both transports, and a
 probe of that build's own API (`navigator.modelContext` with `registerTool` only; the page aliases it
 and adds the missing methods per feature detection). Chrome 150 with the flag provides the complete
-`document.modelContext` and registered the tools natively. The ChatGPT in-app browser remains to be
-tried on the deployed URL.
+`document.modelContext`, registers and invokes the tools natively, and held a gated `execute` promise
+open for 110 seconds until the human declined. The ChatGPT in-app browser remains to be tried on the
+deployed URL.
 
 ## What this is not
 

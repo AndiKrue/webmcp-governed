@@ -8,7 +8,7 @@ implementation (`src/webmcp/polyfill.ts`), installed in full only when the brows
 | Browser | Where the API lives | Methods provided | What the page does |
 |---|---|---|---|
 | Chrome for Testing 148.0.7778.97 (Linux, Puppeteer's build) with `--enable-features=WebMCPTesting` or any of the other flags below | `navigator.modelContext` only | `registerTool` | aliases it onto `document`, keeps native `registerTool`, adds `getTools`, `executeTool` and `toolchange` on top (badge: *native WebMCP (partial, completed by the page)*) |
-| Chrome 150.0.7871.182 (Windows) with `chrome://flags/#enable-webmcp-testing`, reported by the author on the deployed preview with `?nopolyfill=1` | `document.modelContext` | `registerTool`, `getTools`, `executeTool`, `ontoolchange` | nothing added; registration succeeded natively, `getTools()` listed the tools, and `executeTool` invoked them natively and returned the correct JSON with `receipt_id` (badge: *native WebMCP*) |
+| Chrome 150.0.7871.182 (Windows) with `chrome://flags/#enable-webmcp-testing`, reported by the author on the deployed preview and on local build 36675d4 with `?console=1&nopolyfill=1` | `document.modelContext` | `registerTool`, `getTools`, `executeTool`, `ontoolchange` | nothing added; registration succeeded natively, `getTools()` listed the tools, `executeTool` invoked them natively and returned the correct JSON with `receipt_id`, and a held gated call stayed open for 110 s until the human decided (badge: *native WebMCP*) |
 
 Native invocation on Chrome 150 works. What first looked like a failure was the argument shape, not a
 missing method: Chrome 150's `executeTool` takes the input as a **JSON string** and rejects an object
@@ -18,6 +18,22 @@ native API and falls back to the object form on `UnknownError`.
 
 Feature detection is per method (`installModelContext` in `src/webmcp/polyfill.ts` returns which
 methods were native and which were shimmed; the diagnostics panel shows both).
+
+## Native hold measurement (Chrome 150.0.7871.182)
+
+Verified by the author on Windows, `#enable-webmcp-testing`, local build 36675d4, `?console=1&nopolyfill=1`,
+console path "document.modelContext.executeTool (native, JSON string argument)":
+
+| Step | Observation |
+|---|---|
+| `categorise_expense` E-007 → meals called through native `executeTool` | a card appeared; no result was returned |
+| 110 153 ms later the human declined with reason "Notion is software" | the promise resolved with `{status:"declined", reason:"Notion is software", retry_hint:"different_arguments", receipt_id:"L-0001"}` |
+| Ledger | one `declined` row with `latency_ms` of about 110 s; no `cancelled_by_caller` row |
+
+Chrome 150 holds a native `execute` promise open for at least 110 s and delivers the structured
+refusal when it settles. The `hold` transport is therefore sound on Chrome itself. What remains
+unknown is whether the ChatGPT desktop app's built-in browser does the same; that is the one test
+the author still has to run, using the ledger the same way.
 
 ## Verified here
 
@@ -51,8 +67,8 @@ with `InvalidStateError`), but nothing in it can invoke a tool, so the native e2
 the page-added `executeTool`, which reaches the same registered `execute` and the same gate. Whether
 a real client keeps a 15-second pending gated call open could therefore **not** be observed here. The
 ledger's `latency_ms` and any `cancelled_by_caller` rows are how the author reads that from the
-ChatGPT test. Chrome 150 (see the table above) invokes natively, so that observation is possible
-there once an agent is attached.
+ChatGPT test. Chrome 150 (see the table above) invokes natively and, per the measurement above, holds
+the call open.
 
 ## Remaining for the author
 
@@ -60,6 +76,6 @@ there once an agent is attached.
 |---|---|---|
 | Open the deployed URL, confirm the "Site tools" panel lists three read and four write tools | ChatGPT desktop app, built-in browser | the open/gated split is visible before any call |
 | Shots 1–4 of `VIDEO-SHOTLIST.md` | ChatGPT desktop app | every gated call is the probe: an `approved`/`declined` row with a `latency_ms` of seconds means the client held the call; a `cancelled_by_caller` row or the agent reporting a failed call means it did not — then set `DEFAULT_TRANSPORT = "two-call"` in `src/gate/config.ts`, redeploy, repeat |
-| Same shots | Chrome 149+ with `chrome://flags/#enable-webmcp-testing` and an agent attached | same reading |
+| Same shots with an agent attached (the hold itself is already verified on Chrome 150, see above) | Chrome 149+ with `chrome://flags/#enable-webmcp-testing` | same reading |
 | Cloudflare Pages production build (`npm run build`, output `dist`, Node from `.node-version`) | Pages dashboard | if the build image ignores `.node-version`, set `NODE_VERSION=22` on the project |
 | Fill the `**Live:**` and `**Video:**` placeholders in the README | repository | — |
