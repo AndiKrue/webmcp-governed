@@ -12,7 +12,9 @@ append-only ledger as the receipt. Built for the WebMCP Challenge. Product name:
 - `npm run preview` — serve `dist/` on port 4173.
 - `npm run typecheck` — `tsc --noEmit` (strict).
 - `npm run test` — vitest (happy-dom), dot reporter.
-- `npm run e2e` — Puppeteer smoke test against `vite preview`.
+- `npm run e2e` — Puppeteer demo path against `vite preview` (run `npm run build` first); add
+  `-- --native` to also try Chrome for Testing's own `modelContext` behind `--enable-features=WebMCPTesting`.
+- `node e2e/native-probe.mjs` — informational: which flags expose a native `modelContext`.
 - `npm run lint:headers` — every `.ts/.mjs/.css/.html` must carry the SPDX header.
 - `npm run check` — typecheck + test + build + lint:headers. Must be green before any push.
 
@@ -26,8 +28,9 @@ src/ledger/ledger.ts                        append-only in-memory ledger
 src/data/fixture.ts                         the seeded team budget
 src/tools/*.ts                              the seven tools
 src/ui/{table,card,ledger-view,diagnostics,harness}.ts
-tests/*.test.ts  e2e/smoke.mjs  scripts/check-headers.mjs
+tests/*.test.ts  e2e/smoke.mjs  e2e/native-probe.mjs  scripts/check-headers.mjs
 docs/VERIFICATION.md  SUBMISSION.md  VIDEO-SHOTLIST.md
+.github/workflows/check.yml                 npm ci && npm run check on push and PR (no e2e)
 ```
 
 ## Where the transport default lives
@@ -48,5 +51,9 @@ abandon held `execute` promises.
   ledger as evidence, signed, or tamper-proof.
 - Write the WebMCP code here; do not copy from other demos or polyfills.
 - State is in memory by design — do not add persistence, auth, signing, or multi-user.
+- The page makes no runtime requests: no CDN fonts, no analytics. `index.html` is a single route;
+  never navigate, because `executeTool` returns null on navigation.
+- `?harness=1` exposes `window.__harnessInvoke` for the e2e test; judges opening the bare URL see
+  no harness.
 - `execute` never throws: refusals, validation failures and pending states are resolved JSON values,
   because a rejected promise reaches the agent as an opaque `UnknownError`.

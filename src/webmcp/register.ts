@@ -28,17 +28,14 @@ export class ToolRegistry {
     if (!document.modelContext) throw new Error("document.modelContext is not available");
     if (this.#entries.has(tool.name)) this.unregister(tool.name);
     const controller = new AbortController();
-    const registration: ModelContextTool = {
-      name: tool.name,
-      description: tool.description,
-      execute: tool.execute,
-    };
-    if (tool.title !== undefined) registration.title = tool.title;
-    if (tool.inputSchema !== undefined) registration.inputSchema = tool.inputSchema;
-    if (tool.annotations !== undefined) registration.annotations = tool.annotations;
-    // The literal below is the registration call the WebMCP Challenge looks for.
+    // Every tool the page offers goes through this one call. `execute` is the gate's wrapper.
     await document.modelContext.registerTool({
-      ...registration,
+      name: tool.name,
+      title: tool.title,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      annotations: tool.annotations,
+      execute: tool.execute,
     }, { signal: controller.signal });
     this.#entries.set(tool.name, { definition: tool, controller });
   }

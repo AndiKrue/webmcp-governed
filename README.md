@@ -74,34 +74,83 @@ a channel that does not exist.
 ## Running it
 
 ```
-npm install
+npm ci
 npm run dev
 ```
 
 Then open the local URL in a browser with WebMCP:
 
-- **ChatGPT desktop app** — the in-app browser supports WebMCP by default.
+- **ChatGPT desktop app** — the in-app browser supports WebMCP by default. The address bar's "Site
+  tools" panel lists the seven tools, three read and four write.
 - **Chrome 149+** — enable `chrome://flags/#enable-webmcp-testing` and restart.
 
-Ask the agent to list this month's expenses. Then ask it to pay one.
+Ask the agent to list this month's uncategorised expenses. Then ask it to categorise one, decline it
+with a reason, and watch it come back. Then ask it to pay draft D-001.
+
+Without an agent the page installs its own small `document.modelContext` (the header badge says
+*polyfill — no agent attached*) so everything still runs. Add `?harness=1` to get a form that calls
+tools the way an agent would. Add `?transport=two-call` to try the fallback transport (the default is
+`hold`; the constant lives in `src/gate/config.ts`). Add `?nopolyfill=1` to see what the browser
+provides on its own.
+
+```
+npm run check   # typecheck, unit tests, build, licence headers
+npm run e2e     # headless Chrome through document.modelContext, both transports
+```
+
+`npm run build` writes a static `dist/` that serves from the site root.
 
 ## How it is implemented
 
-Tools are registered on load:
+Tools are registered on load, one call each, in `src/webmcp/register.ts`:
 
-```js
-document.modelContext.registerTool({
-  name: "search_products",
-  description: "Search the product catalog",
-  inputSchema: { /* ... */ },
-  execute: async (input) => { /* ... */ }
-});
+```ts
+await document.modelContext.registerTool({
+  name: tool.name,
+  title: tool.title,
+  description: tool.description,
+  inputSchema: tool.inputSchema,
+  annotations: tool.annotations,
+  execute: tool.execute,
+}, { signal: controller.signal });
 ```
 
-Gated tools wrap `execute` in a proposal. The returned promise does not resolve until a human decides.
-On approval it resolves with the real result; on refusal it resolves with a structured decline.
+`execute` is the gate's wrapper (`src/gate/gate.ts`). The class — `open`, `gated`, `sealed` — is a
+property of the tool definition. The gate reads it from there, never from the input.
 
-The gate is a single function each tool calls. The ledger is append-only and lives in memory.
+**Two transports.** In `hold`, the default, a gated `execute` returns a promise that does not resolve
+until a human decides on the card. On approval it resolves with the real result; on refusal with the
+structured decline. The spec defines no timeout for `execute`, so this is conformant, and it is the
+simplest thing that can work: one call, one answer. In `two-call`, for clients that will not hold a
+call open, `execute` resolves at once with `{status:"pending_approval", approval_token}` and an
+eighth tool, `commit_approved_action`, returns the result or the refusal once the human has decided.
+Tokens are single-use. The card and the ledger are identical in both. `?transport=` selects one per
+page load; `DEFAULT_TRANSPORT` in `src/gate/config.ts` is the one constant to flip if a real client
+abandons held calls.
+
+**`readOnlyHint`.** The three open tools declare `annotations: { readOnlyHint: true }`, so a client
+can show them as read tools and call them without ceremony. The four write tools do not.
+
+**Structured refusals.** Every result is a resolved plain-JSON value: `{status:"ok", …}`,
+`{status:"declined", reason, retry_hint}`, `{status:"invalid", errors}`. Nothing throws out of
+`execute`, because a rejected promise reaches the caller as an opaque `"UnknownError"` DOMException
+and the reason would be lost. Each result carries a `receipt_id`, the ledger row it belongs to.
+
+**`signal`.** `execute` receives `options.signal`. If the caller aborts while a card is up, the ledger
+records `cancelled_by_caller`, the card is withdrawn, and the promise resolves anyway.
+
+**Sealed confirmation.** For `pay_reimbursement` the human types the amount. The gate checks it
+(`decide(id, "approve", { confirmation })` refuses a wrong value); the button state only reflects it.
+
+The ledger is append-only and lives in memory. `latency_ms` on each row (proposal to decision) and
+any `cancelled_by_caller` rows are how you can tell, from any client, whether it held the call open.
+
+## Verification status
+
+See [docs/VERIFICATION.md](docs/VERIFICATION.md): unit tests, an end-to-end run through
+`document.modelContext.executeTool` in headless Chrome for Testing 148 in both transports, and a native
+probe of that build's own `modelContext` (it exposes `registerTool` only). The ChatGPT in-app browser
+and Chrome 149+ with the flag remain to be tried on the deployed URL.
 
 ## What this is not
 
@@ -117,7 +166,10 @@ log. That is the right answer and it is not built here.
 anything about the mechanism.
 
 **Not a permission dialog.** Browsers have those and they are dismissed reflexively, because they are
-generic. These carry the actual arguments — this amount, this recipient, this record.
+generic. These carry the actual arguments — this amount, this recipient, this record. The two are
+different layers: a browser such as ChatGPT's may show its own generic prompt before `execute` runs
+at all; the page's card appears after, inside the tool, with the arguments on it. Both can happen for
+the same payment, and the ledger records only the page's decision.
 
 ## What production would need
 
