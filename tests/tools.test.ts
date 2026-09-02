@@ -57,7 +57,7 @@ describe("list_expenses", () => {
     const dana = await gate.execute(tool("list_expenses"), { member: "dana", month: "2026-08" });
     expect(dana).toMatchObject({ status: "ok", count: 7 });
     const unc = await gate.execute(tool("list_expenses"), { category: "uncategorised" });
-    expect((unc as { expenses: { id: string }[] }).expenses.map((e) => e.id)).toEqual(["E-007", "E-019", "E-020"]);
+    expect((unc as unknown as { expenses: { id: string }[] }).expenses.map((e) => e.id)).toEqual(["E-007", "E-019", "E-020"]);
     const flagged = await gate.execute(tool("list_expenses"), { status: "flagged" });
     expect(flagged).toMatchObject({ count: 1 });
     expect(gate.pending).toHaveLength(0);
@@ -74,13 +74,13 @@ describe("find_duplicates and summarise_month", () => {
   it("finds the two seeded pairs", async () => {
     const result = await gate.execute(tool("find_duplicates"), {});
     expect(result).toMatchObject({ status: "ok" });
-    expect((result as { pairs: { a: string; b: string }[] }).pairs.map((p) => `${p.a}/${p.b}`)).toEqual(["E-004/E-006", "E-013/E-016"]);
+    expect((result as unknown as { pairs: { a: string; b: string }[] }).pairs.map((p) => `${p.a}/${p.b}`)).toEqual(["E-004/E-006", "E-013/E-016"]);
   });
 
   it("summarises the fixture month by default", async () => {
     const result = await gate.execute(tool("summarise_month"), {});
     expect(result).toMatchObject({ status: "ok", month: "2026-08", uncategorised_count: 3 });
-    const r = result as { total: string; by_member: Record<string, string>; by_category: Record<string, string> };
+    const r = result as unknown as { total: string; by_member: Record<string, string>; by_category: Record<string, string> };
     expect(Object.keys(r.by_member).sort()).toEqual(["Dana", "Femi", "Lin", "Rafael"]);
     expect(r.by_category["uncategorised"]).toBe("61.20");
     expect(r.total).toMatch(/^\d+\.\d{2}$/);

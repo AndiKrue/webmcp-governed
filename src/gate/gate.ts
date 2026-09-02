@@ -155,7 +155,7 @@ function defaultArgs(input: unknown): ArgumentView[] {
 
 export class Gate {
   readonly ledger: Ledger;
-  readonly transport: Transport;
+  transport: Transport;
   readonly api: ApiMode;
   #now: () => number;
   #random: () => string;
@@ -417,6 +417,13 @@ export class Gate {
       confirmation_used: row.confirmation_used,
       outcome: row.outcome,
     });
+  }
+
+  /** Switches transport in place: pending proposals are cancelled, everything else stays. */
+  setTransport(transport: Transport): void {
+    for (const proposal of this.pending) this.cancel(proposal.id);
+    this.transport = transport;
+    this.#emit();
   }
 
   /** Forgets all proposals (pending ones are cancelled first). Used by "Reset to fixture". */
