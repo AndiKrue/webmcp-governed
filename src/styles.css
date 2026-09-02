@@ -1,0 +1,42 @@
+/*
+  SPDX-License-Identifier: AGPL-3.0-or-later
+  Copyright (C) 2026 Andreas Krueger
+  This file is part of Governed Tool Calls, a WebMCP demo. See LICENSE.
+*/
+
+:root {
+  --accent: #1f5fbf;
+  --accent-ink: #ffffff;
+  --ink: #1c1c1c;
+  --muted: #5f6368;
+  --line: #d9dce1;
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --sealed: #8a1c1c;
+  --ok: #1e7b3a;
+  --warn: #9a6a00;
+  --radius: 6px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
+
+.site-header {
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; justify-content: space-between;
+  padding: 1.25rem 1.5rem 1rem; border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.site-header h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+.thesis { margin: 0; color: var(--muted); max-width: 48rem; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(20rem, 2fr); gap: 1.5rem; padding: 1.5rem; flex: 1; }
+@media (max-width: 60rem) { .layout { grid-template-columns: 1fr; } }
+
+.site-footer {
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+  padding: 0.75rem 1.5rem; border-top: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 0.9rem;
+}
